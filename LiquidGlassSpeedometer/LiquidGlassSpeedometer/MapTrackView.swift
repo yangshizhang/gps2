@@ -76,7 +76,7 @@ struct MapTrackView: View {
                     ))
                 } else if case .camera(let camera) = position {
                     let newCamera = MKMapCamera(lookingAtCenter: newValue.coordinate,
-                                                fromDistance: camera.centerCoordinateDistance,
+                                                fromDistance: camera.altitude,
                                                 pitch: camera.pitch,
                                                 heading: camera.heading)
                     position = .camera(newCamera)
