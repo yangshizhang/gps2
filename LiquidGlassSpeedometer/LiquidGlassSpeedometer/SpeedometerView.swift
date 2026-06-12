@@ -57,7 +57,7 @@ struct SpeedometerView: View {
                 // 开始时间 + 最高速度
                 HStack(spacing: 12) {
                     InfoCard(title: "开始时间",
-                             value: app.startTime != nil ? Self.timestampFormatter.string(from: app.startTime!) : "--:--",
+                             value: app.currentSession?.startTime != nil ? Self.timestampFormatter.string(from: app.currentSession!.startTime) : "--:--",
                              systemImage: "calendar.badge.clock")
                     InfoCard(title: "最高时速",
                              value: String(format: "%.1f km/h", app.maxSpeed),

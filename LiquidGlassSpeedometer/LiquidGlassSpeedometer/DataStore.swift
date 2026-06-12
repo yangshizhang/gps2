@@ -2,6 +2,7 @@ import Foundation
 import SwiftUI
 import Combine
 import CoreLocation
+import MapKit
 #if canImport(UIKit)
 import UIKit
 #endif
