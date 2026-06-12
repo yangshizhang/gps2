@@ -18,8 +18,89 @@ struct RootTabView: View {
             NavigationStack { SettingsView() }
                 .tabItem { Label("设置", systemImage: "gearshape.fill") }
         }
+        .overlay(alignment: .topTrailing) {
+            if app.showMockGps {
+                MockGpsFloatingPanel()
+                    .padding(.top, 8)
+                    .padding(.trailing, 12)
+            }
+        }
         .tint(.cyan)
         .preferredColorScheme(.dark)
+    }
+}
+
+/// 模拟 GPS 悬浮面板（Liquid glass 风格）
+private struct MockGpsFloatingPanel: View {
+    @EnvironmentObject var app: AppState
+    @State private var isExpanded: Bool = true
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "antenna.radiowaves.left.and.right")
+                    .foregroundStyle(app.mockEnabled ? Color.green : Color.white.opacity(0.7))
+                Text("模拟 GPS")
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white)
+                Spacer()
+                Toggle("", isOn: $app.mockEnabled)
+                    .labelsHidden()
+                    .toggleStyle(SwitchToggleStyle(tint: .cyan))
+                Button {
+                    withAnimation(.easeInOut) { isExpanded.toggle() }
+                } label: {
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .foregroundStyle(.white.opacity(0.8))
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                Button {
+                    app.showMockGps = false
+                    app.mockEnabled = false
+                } label: {
+                    Image(systemName: "xmark")
+                        .foregroundStyle(.white.opacity(0.8))
+                        .font(.system(size: 11, weight: .semibold))
+                }
+            }
+
+            if isExpanded {
+                VStack(alignment: .leading, spacing: 8) {
+                    sliderRow(label: "速度", value: $app.mockSpeedKmH, range: 0...200, unit: "km/h")
+                    sliderRow(label: "海拔", value: $app.mockAltitude, range: -100...5000, unit: "m")
+                    sliderRow(label: "航向", value: $app.mockHeading, range: 0...359, unit: "°")
+                    HStack {
+                        Text("状态：")
+                            .font(.system(size: 11, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.7))
+                        Text(app.mockEnabled ? "模拟中" : "已关闭")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundStyle(app.mockEnabled ? Color.green : Color.white.opacity(0.6))
+                    }
+                }
+                .padding(.top, 2)
+            }
+        }
+        .padding(12)
+        .frame(width: 240)
+        .liquidGlass(radius: 16, fill: .ultraThinMaterial)
+        .shadow(color: .black.opacity(0.5), radius: 14, x: 0, y: 6)
+    }
+
+    private func sliderRow(label: String, value: Binding<Double>, range: ClosedRange<Double>, unit: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack {
+                Text(label)
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.75))
+                Spacer()
+                Text(String(format: "%.0f %@", value.wrappedValue, unit))
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white)
+            }
+            Slider(value: value, in: range, step: 1)
+                .tint(.cyan)
+        }
     }
 }
 

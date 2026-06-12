@@ -9,12 +9,13 @@ struct MapTrackView: View {
     @EnvironmentObject var app: AppState
     @EnvironmentObject var loc: LocationManager
 
-    @State private var region: MKCoordinateRegion = MKCoordinateRegion(
+    @State private var position: MapCameraPosition = .region(MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 39.908, longitude: 116.397),
         span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
-    )
+    ))
 
     @State private var polylineCoords: [CLLocationCoordinate2D] = []
+    @State private var userDidInteract: Bool = false
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -26,7 +27,7 @@ struct MapTrackView: View {
             )
             .ignoresSafeArea()
 
-            Map(position: .constant(.region(region))) {
+            Map(position: $position) {
                 // 用户位置
                 UserAnnotation()
 
@@ -35,6 +36,9 @@ struct MapTrackView: View {
                     MapPolyline(coordinates: polylineCoords)
                         .stroke(Color.cyan, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
                 }
+            }
+            .onMapCameraChange(frequency: .onEnd) { context in
+                userDidInteract = true
             }
             .mapStyle(.standard(emphasis: .muted))
             .ignoresSafeArea(edges: .bottom)
@@ -55,19 +59,37 @@ struct MapTrackView: View {
         .onAppear {
             loc.start()
             if let loc2d = loc.lastLocation {
-                region.center = loc2d.coordinate
+                position = .region(MKCoordinateRegion(
+                    center: loc2d.coordinate,
+                    span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+                ))
             }
         }
         .onChange(of: loc.lastLocation) { newValue in
             guard let newValue else { return }
-            region.center = newValue.coordinate
-            // 平滑拉取当前会话坐标
+            // 仅当用户未手动操作地图时自动跟随中心更新
+            if !userDidInteract {
+                if case .region(let currentRegion) = position {
+                    position = .region(MKCoordinateRegion(
+                        center: newValue.coordinate,
+                        span: currentRegion.span
+                    ))
+                } else if case .camera(let camera) = position {
+                    let newCamera = MKMapCamera(lookingAtCenter: newValue.coordinate,
+                                                fromDistance: camera.centerCoordinateDistance,
+                                                pitch: camera.pitch,
+                                                heading: camera.heading)
+                    position = .camera(newCamera)
+                } else {
+                    position = .region(MKCoordinateRegion(
+                        center: newValue.coordinate,
+                        span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+                    ))
+                }
+            }
+            // 平滑拉取当前会话坐标（用于轨迹显示）
             if let session = app.currentSession {
                 polylineCoords = session.coordinates()
-            } else {
-                if !polylineCoords.isEmpty && !app.isRecording {
-                    // 已停止
-                }
             }
         }
         .navigationTitle("地图")

@@ -86,14 +86,14 @@ struct SpeedometerDial: View {
     }
 }
 
-/// 刻度线（0 ~ 200 km/h
+/// 刻度线（0 ~ 200 km/h）
 private struct TickMarks: View {
     var diameter: CGFloat
     var body: some View {
         ZStack {
             ForEach(0..<21, id: \.self) { i in
                 let ratio = Double(i) / 20.0
-                let angle = -108.0 + ratio * 216.0   // 从 -108 度 至 108 度（216 度弧线
+                let angle = -108.0 + ratio * 216.0   // -108° 至 108°（216° 弧线）
                 let isMajor = i % 5 == 0
                 Rectangle()
                     .fill(Color.white.opacity(isMajor ? 0.85 : 0.35))
@@ -101,12 +101,13 @@ private struct TickMarks: View {
                     .offset(y: -diameter * 0.42)
                     .rotationEffect(.degrees(angle))
                 if isMajor {
+                    let angleRad = angle * .pi / 180.0
+                    let textRadius = diameter * 0.34
                     Text("\(i * 10)")
-                        .font(.system(size: diameter * 0.05, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.7))
-                        .offset(y: -diameter * 0.34)
-                        .rotationEffect(.degrees(angle))
-                        .rotationEffect(.degrees(-angle))
+                        .font(.system(size: diameter * 0.055, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.75))
+                        .offset(x: sin(angleRad) * textRadius,
+                                y: -cos(angleRad) * textRadius)
                 }
             }
         }

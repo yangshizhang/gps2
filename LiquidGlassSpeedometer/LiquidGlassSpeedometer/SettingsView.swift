@@ -7,6 +7,11 @@ struct SettingsView: View {
     @AppStorage("keep_screen_on") private var keepScreenOn: Bool = true
     @AppStorage("auto_pause") private var autoPause: Bool = false
 
+    @EnvironmentObject var app: AppState
+    @State private var showFeedback: Bool = false
+    @State private var feedbackText: String = ""
+    @State private var feedbackMessage: String = ""
+
     var body: some View {
         ZStack {
             LinearGradient(
@@ -67,6 +72,27 @@ struct SettingsView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 10) {
+                        Label("反馈", systemImage: "envelope")
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.white)
+                        Button {
+                            feedbackText = ""
+                            feedbackMessage = ""
+                            showFeedback = true
+                        } label: {
+                            HStack {
+                                Image(systemName: "paperplane.fill")
+                                Text("提交用户反馈")
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                            }
+                            .foregroundStyle(.white)
+                            .padding(12)
+                        }
+                        .liquidGlass(radius: 16, fill: .ultraThinMaterial)
+                    }
+
+                    VStack(alignment: .leading, spacing: 10) {
                         Label("关于", systemImage: "info.circle")
                             .font(.system(size: 14, weight: .semibold, design: .rounded))
                             .foregroundStyle(.white)
@@ -87,6 +113,25 @@ struct SettingsView: View {
         }
         .navigationTitle("设置")
         .navigationBarTitleDisplayMode(.inline)
+        .alert("用户反馈", isPresented: $showFeedback) {
+            // iOS 16+ 支持 TextField 放在 alert 的 actions 中
+            TextField("请输入反馈内容", text: $feedbackText)
+            Button("发送") {
+                if feedbackText == "114514" {
+                    app.showMockGps = true
+                    feedbackMessage = "测试模式已开启"
+                } else {
+                    feedbackMessage = "反馈已提交，感谢您的支持！"
+                }
+            }
+            Button("取消", role: .cancel) { }
+        } message: {
+            if feedbackMessage.isEmpty {
+                Text("您的反馈将帮助我们改进产品。")
+            } else {
+                Text(feedbackMessage)
+            }
+        }
     }
 }
 

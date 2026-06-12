@@ -22,6 +22,13 @@ final class AppState: ObservableObject {
     @Published var heading: Double = 0
     @Published var acceleration: Double = 0
 
+    // 模拟 GPS 菜单（仅内存状态，APP 重启后自动消失）
+    @Published var showMockGps: Bool = false
+    @Published var mockSpeedKmH: Double = 0
+    @Published var mockAltitude: Double = 0
+    @Published var mockHeading: Double = 0
+    @Published var mockEnabled: Bool = false
+
     private var timer: Timer?
     private var cancellables = Set<AnyCancellable>()
 
@@ -30,13 +37,15 @@ final class AppState: ObservableObject {
     }
 
     private func bindManagers() {
+        // 速度 & 海拔 & 航向数据源：mock 优先，否则用真实 GPS
         locationManager.$speedKmH
             .receive(on: RunLoop.main)
             .sink { [weak self] v in
                 guard let self else { return }
-                self.currentSpeed = max(0, v)
+                let value = self.mockEnabled ? self.mockSpeedKmH : max(0, v)
+                self.currentSpeed = value
                 if self.isRecording {
-                    self.maxSpeed = max(self.maxSpeed, self.currentSpeed)
+                    self.maxSpeed = max(self.maxSpeed, value)
                     self.currentSession?.maxSpeed = self.maxSpeed
                 }
             }
@@ -44,11 +53,44 @@ final class AppState: ObservableObject {
 
         locationManager.$altitude
             .receive(on: RunLoop.main)
-            .assign(to: &$altitude)
+            .sink { [weak self] v in
+                guard let self else { return }
+                self.altitude = self.mockEnabled ? self.mockAltitude : v
+            }
+            .store(in: &cancellables)
 
         locationManager.$heading
             .receive(on: RunLoop.main)
-            .assign(to: &$heading)
+            .sink { [weak self] v in
+                guard let self else { return }
+                self.heading = self.mockEnabled ? self.mockHeading : v
+            }
+            .store(in: &cancellables)
+
+        // 当 mock 开启时也主动推送模拟位置（用于地图与轨迹记录）
+        $mockEnabled
+            .receive(on: RunLoop.main)
+            .sink { [weak self] enabled in
+                guard let self else { return }
+                if enabled {
+                    self.locationManager.stop()
+                    self.locationManager.injectMock(
+                        speed: self.mockSpeedKmH,
+                        altitude: self.mockAltitude,
+                        heading: self.mockHeading
+                    )
+                }
+            }
+            .store(in: &cancellables)
+
+        // mock 参数变化时更新模拟位置
+        Publishers.CombineLatest3($mockSpeedKmH, $mockAltitude, $mockHeading)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] speed, alt, head in
+                guard let self, self.mockEnabled else { return }
+                self.locationManager.injectMock(speed: speed, altitude: alt, heading: head)
+            }
+            .store(in: &cancellables)
 
         locationManager.$lastLocation
             .receive(on: RunLoop.main)
@@ -62,14 +104,12 @@ final class AppState: ObservableObject {
                     timestamp: Date()
                 )
                 session.locations.append(pt)
-                // 累计距离（米）
                 if session.locations.count >= 2 {
                     let prev = session.locations[session.locations.count - 2]
                     let a = CLLocation(latitude: prev.latitude, longitude: prev.longitude)
                     let b = CLLocation(latitude: pt.latitude, longitude: pt.longitude)
                     session.distance += a.distance(from: b)
                 }
-                // 简单平均速度（总距离 / 总时长）
                 let dur = session.duration
                 if dur > 0 {
                     session.averageSpeed = (session.distance / 1000.0) / (dur / 3600.0)

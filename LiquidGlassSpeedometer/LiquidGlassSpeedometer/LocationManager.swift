@@ -3,6 +3,7 @@ import CoreLocation
 import Combine
 
 /// 位置/速度/海拔/航向管理
+@MainActor
 final class LocationManager: NSObject, ObservableObject {
     private let manager = CLLocationManager()
 
@@ -12,6 +13,10 @@ final class LocationManager: NSObject, ObservableObject {
     @Published var heading: Double = 0          // degrees
     @Published var authorization: CLAuthorizationStatus = .notDetermined
     var totalDistance: Double = 0               // meters
+
+    // 模拟坐标基准（天安门附近），每次 mock 会小幅移动模拟行进
+    private var mockLatitude: Double = 39.9087
+    private var mockLongitude: Double = 116.3975
 
     override init() {
         super.init()
@@ -42,6 +47,35 @@ final class LocationManager: NSObject, ObservableObject {
     func stop() {
         manager.stopUpdatingLocation()
         manager.stopUpdatingHeading()
+    }
+
+    /// 注入模拟 GPS 数据（测试用）
+    func injectMock(speed: Double, altitude: Double, heading: Double) {
+        speedKmH = speed
+        self.altitude = altitude
+        self.heading = heading
+        // 根据航向与速度移动坐标（简单模拟：速度越快，坐标变化越大）
+        let speedMs = speed / 3.6                    // m/s
+        let deltaSeconds: Double = 1.0
+        let distance = speedMs * deltaSeconds        // 米
+        let headingRad = heading * .pi / 180.0
+        // 地球半径 ~6371km，粗略换算经纬度变化
+        let latDelta = distance * cos(headingRad) / 111320.0
+        let lonDelta = distance * sin(headingRad) / (111320.0 * cos(mockLatitude * .pi / 180.0))
+        mockLatitude += latDelta
+        mockLongitude += lonDelta
+        let coord = CLLocationCoordinate2D(latitude: mockLatitude, longitude: mockLongitude)
+        let loc = CLLocation(
+            coordinate: coord,
+            altitude: altitude,
+            horizontalAccuracy: 5,
+            verticalAccuracy: 5,
+            course: heading,
+            speed: speedMs,
+            timestamp: Date()
+        )
+        if let prev = lastLocation { totalDistance += loc.distance(from: prev) }
+        lastLocation = loc
     }
 }
 
