@@ -67,19 +67,13 @@ struct MapTrackView: View {
         }
         .onChange(of: loc.lastLocation) { newValue in
             guard let newValue else { return }
-            // 仅当用户未手动操作地图时自动跟随中心更新
+            // 仅当用户未手动操作地图时自动跟随位置更新
             if !userDidInteract {
                 if case .region(let currentRegion) = position {
                     position = .region(MKCoordinateRegion(
                         center: newValue.coordinate,
                         span: currentRegion.span
                     ))
-                } else if case .camera(let camera) = position {
-                    let newCamera = MKMapCamera(lookingAtCenter: newValue.coordinate,
-                                                fromDistance: camera.altitude,
-                                                pitch: camera.pitch,
-                                                heading: camera.heading)
-                    position = .camera(newCamera)
                 } else {
                     position = .region(MKCoordinateRegion(
                         center: newValue.coordinate,
@@ -87,7 +81,6 @@ struct MapTrackView: View {
                     ))
                 }
             }
-            // 平滑拉取当前会话坐标（用于轨迹显示）
             if let session = app.currentSession {
                 polylineCoords = session.coordinates()
             }
