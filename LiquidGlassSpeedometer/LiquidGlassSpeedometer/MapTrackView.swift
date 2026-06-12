@@ -3,8 +3,6 @@ import MapKit
 import CoreLocation
 
 /// 地图界面：显示本次路径轨迹
-/// 说明：为了避免强依赖第三方 SDK 时的编译问题，这里默认使用 Apple MapKit 作为基础实现，
-/// 同时预留了 AMap（高德地图）集成的 API key 配置入口，用户在引入 AMap SDK 后可直接替换。
 struct MapTrackView: View {
     @EnvironmentObject var app: AppState
     @EnvironmentObject var loc: LocationManager
@@ -13,9 +11,9 @@ struct MapTrackView: View {
         center: CLLocationCoordinate2D(latitude: 39.908, longitude: 116.397),
         span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
     ))
-
     @State private var polylineCoords: [CLLocationCoordinate2D] = []
     @State private var userDidInteract: Bool = false
+    @State private var currentSpan: MKCoordinateSpan = MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -28,10 +26,7 @@ struct MapTrackView: View {
             .ignoresSafeArea()
 
             Map(position: $position) {
-                // 用户位置
                 UserAnnotation()
-
-                // 轨迹 Polyline
                 if polylineCoords.count >= 2 {
                     MapPolyline(coordinates: polylineCoords)
                         .stroke(Color.cyan, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
@@ -39,11 +34,12 @@ struct MapTrackView: View {
             }
             .onMapCameraChange(frequency: .onEnd) { context in
                 userDidInteract = true
+                currentSpan = context.region.span
             }
             .mapStyle(.standard(emphasis: .muted))
             .ignoresSafeArea(edges: .bottom)
 
-            // 顶部 HUD：速度 / 海拔 / 时间（Liquid glass 风格
+            // 顶部 HUD
             VStack(spacing: 10) {
                 HStack(spacing: 12) {
                     HUDCard(title: "速度", value: String(format: "%.0f km/h", app.currentSpeed), systemImage: "gauge.with.dots.needle.bottom.50percent")
@@ -61,25 +57,17 @@ struct MapTrackView: View {
             if let loc2d = loc.lastLocation {
                 position = .region(MKCoordinateRegion(
                     center: loc2d.coordinate,
-                    span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+                    span: currentSpan
                 ))
             }
         }
         .onChange(of: loc.lastLocation) { newValue in
             guard let newValue else { return }
-            // 仅当用户未手动操作地图时自动跟随位置更新
             if !userDidInteract {
-                if case .region(let currentRegion) = position {
-                    position = .region(MKCoordinateRegion(
-                        center: newValue.coordinate,
-                        span: currentRegion.span
-                    ))
-                } else {
-                    position = .region(MKCoordinateRegion(
-                        center: newValue.coordinate,
-                        span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
-                    ))
-                }
+                position = .region(MKCoordinateRegion(
+                    center: newValue.coordinate,
+                    span: currentSpan
+                ))
             }
             if let session = app.currentSession {
                 polylineCoords = session.coordinates()
