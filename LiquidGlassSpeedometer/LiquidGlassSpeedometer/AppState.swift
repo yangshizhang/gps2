@@ -67,28 +67,30 @@ final class AppState: ObservableObject {
             }
             .store(in: &cancellables)
 
-        // 当 mock 开启时也主动推送模拟位置（用于地图与轨迹记录）
+        // 当 mock 开启/关闭时启动/停止模拟
         $mockEnabled
             .receive(on: RunLoop.main)
             .sink { [weak self] enabled in
                 guard let self else { return }
                 if enabled {
-                    self.locationManager.stop()
-                    self.locationManager.injectMock(
+                    self.locationManager.startMocking(
                         speed: self.mockSpeedKmH,
                         altitude: self.mockAltitude,
                         heading: self.mockHeading
                     )
+                } else {
+                    self.locationManager.stopMocking()
+                    self.locationManager.start()
                 }
             }
             .store(in: &cancellables)
 
-        // mock 参数变化时更新模拟位置
+        // mock 参数变化时更新参数（不立即触发位置更新）
         Publishers.CombineLatest3($mockSpeedKmH, $mockAltitude, $mockHeading)
             .receive(on: RunLoop.main)
             .sink { [weak self] speed, alt, head in
                 guard let self, self.mockEnabled else { return }
-                self.locationManager.injectMock(speed: speed, altitude: alt, heading: head)
+                self.locationManager.updateMockParams(speed: speed, altitude: alt, heading: head)
             }
             .store(in: &cancellables)
 
@@ -141,7 +143,9 @@ final class AppState: ObservableObject {
         elapsed = 0
         averageSpeed = 0
         isRecording = true
-        locationManager.start()
+        if !mockEnabled {
+            locationManager.start()
+        }
         motionManager.start()
 
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
@@ -162,7 +166,9 @@ final class AppState: ObservableObject {
             session.endTime = Date()
             dataStore.save(session)
         }
-        locationManager.stop()
+        if !mockEnabled {
+            locationManager.stop()
+        }
         motionManager.stop()
         currentSession = nil
     }
