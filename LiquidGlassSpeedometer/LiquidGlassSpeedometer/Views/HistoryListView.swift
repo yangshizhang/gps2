@@ -1,64 +1,73 @@
 import SwiftUI
-import CoreData
 
-/// 历史记录列表
 struct HistoryListView: View {
     @EnvironmentObject var dataStore: DataStore
-    @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \Session.startTime, ascending: false)],
-        animation: .default
-    ) var sessions: FetchedResults<Session>
+    @State private var showConfirm: Bool = false
+    @State private var sessionToDelete: Session?
 
     var body: some View {
-        ZStack {
-            LinearGradient(
-                colors: [Color(red: 0.15, green: 0.18, blue: 0.35),
-                         Color(red: 0.12, green: 0.14, blue: 0.28)],
-                startPoint: .topLeading, endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+        NavigationStack {
+            ZStack {
+                LinearGradient(
+                    colors: [Color(red: 0.15, green: 0.18, blue: 0.35),
+                             Color(red: 0.12, green: 0.14, blue: 0.28)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
 
-            if sessions.isEmpty {
-                ContentUnavailableView("暂无记录", systemImage: "clock.arrow.circlepath", description: Text("开始记录后将在此显示"))
+                if dataStore.sessions.isEmpty {
+                    ContentUnavailableView(
+                        "暂无记录",
+                        systemImage: "clock.arrow.circlepath",
+                        description: Text("在码表页点击开始记录")
+                    )
                     .foregroundStyle(.white)
-            } else {
-                ScrollView {
-                    LazyVStack(spacing: 12) {
-                        ForEach(sessions, id: \.self) { session in
-                            NavigationLink {
-                                HistoryDetailView(session: session)
-                            } label: {
-                                HistoryRow(session: session)
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 12) {
+                            ForEach(dataStore.sessions) { session in
+                                NavigationLink {
+                                    HistoryDetailView(session: session)
+                                } label: {
+                                    row(session)
+                                }
+                                .buttonStyle(.plain)
+                                .contextMenu {
+                                    Button(role: .destructive) {
+                                        sessionToDelete = session
+                                        showConfirm = true
+                                    } label: {
+                                        Label("删除", systemImage: "trash")
+                                    }
+                                }
                             }
-                            .buttonStyle(.plain)
                         }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 12)
                 }
             }
-        }
-        .navigationTitle("历史记录")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                EditButton()
+            .navigationTitle("历史记录")
+            .navigationBarTitleDisplayMode(.inline)
+            .alert("确认删除", isPresented: $showConfirm) {
+                Button("删除", role: .destructive) {
+                    if let s = sessionToDelete { dataStore.delete(s) }
+                }
+                Button("取消", role: .cancel) { }
+            } message: {
+                Text("此操作不可撤销")
             }
         }
     }
-}
 
-private struct HistoryRow: View {
-    @ObservedObject var session: Session
-
-    var body: some View {
+    private func row(_ session: Session) -> some View {
         HStack(spacing: 14) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(session.title ?? "未知")
+                Text(AppState.dateFormatter.string(from: session.startTime))
                     .font(.system(size: 15, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                 HStack(spacing: 10) {
-                    Label("\(Int(session.maxSpeed.rounded())) km/h", systemImage: "flame.fill")
+                    Label(String(format: "最高 %.1f km/h", session.maxSpeed), systemImage: "flame.fill")
                     Label(AppState.formatDuration(session.duration), systemImage: "stopwatch.fill")
                 }
                 .font(.system(size: 12, design: .rounded))
@@ -74,8 +83,6 @@ private struct HistoryRow: View {
 }
 
 #Preview {
-    NavigationStack {
-        HistoryListView()
-            .environmentObject(DataStore.shared)
-    }
+    HistoryListView()
+        .environmentObject(DataStore.shared)
 }

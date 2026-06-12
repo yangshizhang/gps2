@@ -1,8 +1,10 @@
 import Foundation
 import Combine
 import SwiftUI
+import CoreLocation
 
-/// 应用全局状态容器：负责当前会话（正在记录的数据），并协调 Location/Motion/Store
+/// 应用全局状态：当前会话（正在记录的数据），协调 Location / Motion / Store
+@MainActor
 final class AppState: ObservableObject {
     static let shared = AppState()
 
@@ -10,17 +12,15 @@ final class AppState: ObservableObject {
     let motionManager = MotionManager()
     let dataStore = DataStore.shared
 
-    // 当前会话
     @Published var currentSession: Session? = nil
     @Published var isRecording: Bool = false
-    @Published var startTime: Date? = nil
     @Published var elapsed: TimeInterval = 0
-    @Published var currentSpeed: Double = 0        // km/h
-    @Published var averageSpeed: Double = 0        // km/h
-    @Published var maxSpeed: Double = 0            // km/h
-    @Published var altitude: Double = 0            // meters
-    @Published var heading: Double = 0             // degrees, 0=N
-    @Published var acceleration: Double = 0        // m/s^2 (total)
+    @Published var currentSpeed: Double = 0
+    @Published var averageSpeed: Double = 0
+    @Published var maxSpeed: Double = 0
+    @Published var altitude: Double = 0
+    @Published var heading: Double = 0
+    @Published var acceleration: Double = 0
 
     private var timer: Timer?
     private var cancellables = Set<AnyCancellable>()
@@ -37,9 +37,7 @@ final class AppState: ObservableObject {
                 self.currentSpeed = max(0, v)
                 if self.isRecording {
                     self.maxSpeed = max(self.maxSpeed, self.currentSpeed)
-                    if let session = self.currentSession {
-                        session.maxSpeed = max(session.maxSpeed, self.currentSpeed)
-                    }
+                    self.currentSession?.maxSpeed = self.maxSpeed
                 }
             }
             .store(in: &cancellables)
@@ -55,14 +53,29 @@ final class AppState: ObservableObject {
         locationManager.$lastLocation
             .receive(on: RunLoop.main)
             .sink { [weak self] loc in
-                guard let self, let loc, self.isRecording else { return }
-                self.currentSession?.addLocation(
+                guard let self, let loc, self.isRecording, var session = self.currentSession else { return }
+                let pt = TrackPoint(
                     latitude: loc.coordinate.latitude,
                     longitude: loc.coordinate.longitude,
                     speed: loc.speed > 0 ? loc.speed * 3.6 : 0,
                     altitude: loc.altitude,
-                    timestamp: loc.timestamp
+                    timestamp: Date()
                 )
+                session.locations.append(pt)
+                // 累计距离（米）
+                if session.locations.count >= 2 {
+                    let prev = session.locations[session.locations.count - 2]
+                    let a = CLLocation(latitude: prev.latitude, longitude: prev.longitude)
+                    let b = CLLocation(latitude: pt.latitude, longitude: pt.longitude)
+                    session.distance += a.distance(from: b)
+                }
+                // 简单平均速度（总距离 / 总时长）
+                let dur = session.duration
+                if dur > 0 {
+                    session.averageSpeed = (session.distance / 1000.0) / (dur / 3600.0)
+                    self.averageSpeed = session.averageSpeed
+                }
+                self.currentSession = session
             }
             .store(in: &cancellables)
 
@@ -72,44 +85,29 @@ final class AppState: ObservableObject {
 
         motionManager.$lastMotion
             .receive(on: RunLoop.main)
-            .sink { [weak self] acc in
-                guard let self, self.isRecording else { return }
-                self.currentSession?.addMotion(
-                    x: acc.x, y: acc.y, z: acc.z, timestamp: Date()
-                )
+            .sink { [weak self] m in
+                guard let self, self.isRecording, var session = self.currentSession else { return }
+                let mp = MotionPoint(ax: m.x, ay: m.y, az: m.z, timestamp: Date())
+                session.motions.append(mp)
+                self.currentSession = session
             }
             .store(in: &cancellables)
     }
 
     func startRecording() {
-        let session = Session(context: dataStore.container.viewContext)
-        session.id = UUID()
-        session.startTime = Date()
-        session.title = Self.dateFormatter.string(from: session.startTime!)
-        session.maxSpeed = 0
-        session.distance = 0
+        var session = Session(startTime: Date())
         currentSession = session
-        startTime = session.startTime
         maxSpeed = 0
         elapsed = 0
         averageSpeed = 0
-
         isRecording = true
         locationManager.start()
         motionManager.start()
 
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            guard let self, let start = self.startTime else { return }
-            self.elapsed = Date().timeIntervalSince(start)
-            if let session = self.currentSession {
-                session.duration = self.elapsed
-                let total = session.locations?.count ?? 0
-                if total > 0 {
-                    self.averageSpeed = self.currentSpeed > 0
-                        ? (self.averageSpeed * Double(total - 1) + self.currentSpeed) / Double(total)
-                        : self.averageSpeed
-                    session.averageSpeed = self.averageSpeed
-                }
+            Task { @MainActor in
+                guard let self, let s = self.currentSession else { return }
+                self.elapsed = s.duration
             }
         }
     }
@@ -120,18 +118,16 @@ final class AppState: ObservableObject {
         timer?.invalidate()
         timer = nil
 
-        if let session = currentSession {
+        if var session = currentSession {
             session.endTime = Date()
-            if session.distance == 0 {
-                session.distance = locationManager.totalDistance
-            }
-            dataStore.save()
+            dataStore.save(session)
         }
         locationManager.stop()
         motionManager.stop()
         currentSession = nil
-        startTime = nil
     }
+
+    // MARK: - 格式化
 
     static let dateFormatter: DateFormatter = {
         let f = DateFormatter()

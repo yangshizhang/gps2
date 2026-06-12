@@ -1,11 +1,11 @@
 import SwiftUI
 import MapKit
 
-/// 历史记录详情：数据汇总 + 缩略地图 + 车速图表
 struct HistoryDetailView: View {
-    @ObservedObject var session: Session
+    let session: Session
     @EnvironmentObject var dataStore: DataStore
     @Environment(\.dismiss) private var dismiss
+    @State private var showConfirm: Bool = false
 
     var body: some View {
         ZStack {
@@ -18,18 +18,15 @@ struct HistoryDetailView: View {
 
             ScrollView {
                 VStack(spacing: 14) {
-                    // 顶部信息卡：开始时间 + 时长 + 距离
-                    VStack(spacing: 10) {
-                        HStack {
-                            Text(session.title ?? "")
-                                .font(.system(size: 18, weight: .bold, design: .rounded))
-                                .foregroundStyle(.white)
-                            Spacer()
-                        }
+                    // 顶部信息卡
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(AppState.dateFormatter.string(from: session.startTime))
+                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
                         HStack(spacing: 8) {
                             SmallMetric(title: "时长", value: AppState.formatDuration(session.duration))
-                            SmallMetric(title: "最高", value: String(format: "%.1f km/h", session.maxSpeed))
-                            SmallMetric(title: "平均", value: String(format: "%.1f km/h", session.averageSpeed))
+                            SmallMetric(title: "最高", value: String(format: "%.1f", session.maxSpeed))
+                            SmallMetric(title: "平均", value: String(format: "%.1f", session.averageSpeed))
                             SmallMetric(title: "距离", value: String(format: "%.1f km", session.distance / 1000.0))
                         }
                     }
@@ -52,7 +49,7 @@ struct HistoryDetailView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
                             Image(systemName: "waveform.path.ecg")
-                            Text("车速曲线")
+                            Text("车速曲线 (km/h)")
                                 .font(.system(size: 14, weight: .semibold, design: .rounded))
                         }
                         .foregroundStyle(.white)
@@ -65,8 +62,7 @@ struct HistoryDetailView: View {
 
                     // 删除按钮
                     Button(role: .destructive) {
-                        dataStore.delete(session)
-                        dismiss()
+                        showConfirm = true
                     } label: {
                         HStack {
                             Spacer()
@@ -87,6 +83,15 @@ struct HistoryDetailView: View {
         }
         .navigationTitle("详情")
         .navigationBarTitleDisplayMode(.inline)
+        .alert("确认删除", isPresented: $showConfirm) {
+            Button("删除", role: .destructive) {
+                dataStore.delete(session)
+                dismiss()
+            }
+            Button("取消", role: .cancel) { }
+        } message: {
+            Text("此操作不可撤销")
+        }
     }
 }
 
@@ -99,7 +104,7 @@ private struct SmallMetric: View {
                 .font(.system(size: 10, weight: .medium, design: .rounded))
                 .foregroundStyle(.white.opacity(0.75))
             Text(value)
-                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .font(.system(size: 13, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
@@ -108,7 +113,6 @@ private struct SmallMetric: View {
     }
 }
 
-/// 小型地图：显示完整轨迹
 private struct MiniMapView: View {
     var region: MKCoordinateRegion
     var coordinates: [CLLocationCoordinate2D]
@@ -120,19 +124,16 @@ private struct MiniMapView: View {
                     .stroke(Color.cyan, style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
             }
             if let first = coordinates.first {
-                Marker("起点", coordinate: first)
-                    .tint(.green)
+                Marker("起点", coordinate: first).tint(.green)
             }
             if let last = coordinates.last {
-                Marker("终点", coordinate: last)
-                    .tint(.red)
+                Marker("终点", coordinate: last).tint(.red)
             }
         }
         .mapStyle(.standard(emphasis: .muted))
     }
 }
 
-/// 简单的车速折线图（使用 SwiftUI Path 手绘，不依赖第三方
 private struct SpeedChartView: View {
     var points: [(time: TimeInterval, speed: Double)]
 
@@ -140,8 +141,6 @@ private struct SpeedChartView: View {
         GeometryReader { geo in
             let w = geo.size.width
             let h = geo.size.height
-
-            // 背景网格
             Path { p in
                 for i in 0...4 {
                     let y = CGFloat(i) * h / 4.0
@@ -164,7 +163,6 @@ private struct SpeedChartView: View {
                     }
                 }
 
-                // 填充渐变
                 let fill = Path { p in
                     for (idx, point) in points.enumerated() {
                         let x = maxTime > 0 ? CGFloat(point.time / maxTime) * w : CGFloat(idx) / CGFloat(points.count - 1) * w
@@ -192,5 +190,6 @@ private struct SpeedChartView: View {
 #Preview {
     NavigationStack {
         HistoryDetailView(session: Session())
+            .environmentObject(DataStore.shared)
     }
 }

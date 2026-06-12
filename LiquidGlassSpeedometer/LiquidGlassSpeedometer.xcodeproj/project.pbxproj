@@ -11,7 +11,6 @@
 		00E356F521398239007A95E7 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00E356F421398239007A95E7 /* LocationManager.swift */; };
 		00E356F721398239007A95E7 /* MotionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00E356F621398239007A95E7 /* MotionManager.swift */; };
 		00E356F921398239007A95E7 /* DataStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00E356F821398239007A95E7 /* DataStore.swift */; };
-		00E356FB21398239007A95E7 /* Session+Helpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00E356FA21398239007A95E7 /* Session+Helpers.swift */; };
 		00E356FD21398239007A95E7 /* LiquidGlassSpeedometerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00E356FC21398239007A95E7 /* LiquidGlassSpeedometerApp.swift */; };
 		00E356FF21398239007A95E7 /* LiquidGlass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00E356FE21398239007A95E7 /* LiquidGlass.swift */; };
 		00E3570121398239007A95E7 /* SpeedometerDial.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00E3570021398239007A95E7 /* SpeedometerDial.swift */; };
@@ -21,8 +20,6 @@
 		00E3570921398239007A95E7 /* HistoryDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00E3570821398239007A95E7 /* HistoryDetailView.swift */; };
 		00E3570B21398239007A95E7 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00E3570A21398239007A95E7 /* SettingsView.swift */; };
 		00E3570D21398239007A95E7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 00E3570C21398239007A95E7 /* Assets.xcassets */; };
-		00E3570F21398239007A95E7 /* TrackModel.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 00E3570E21398239007A95E7 /* TrackModel.xcdatamodeld */; };
-		00E3571221398239007A95E7 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 00E3571121398239007A95E7 /* Info.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -31,7 +28,6 @@
 		00E356F421398239007A95E7 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
 		00E356F621398239007A95E7 /* MotionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionManager.swift; sourceTree = "<group>"; };
 		00E356F821398239007A95E7 /* DataStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataStore.swift; sourceTree = "<group>"; };
-		00E356FA21398239007A95E7 /* Session+Helpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Session+Helpers.swift"; sourceTree = "<group>"; };
 		00E356FC21398239007A95E7 /* LiquidGlassSpeedometerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiquidGlassSpeedometerApp.swift; sourceTree = "<group>"; };
 		00E356FE21398239007A95E7 /* LiquidGlass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiquidGlass.swift; sourceTree = "<group>"; };
 		00E3570021398239007A95E7 /* SpeedometerDial.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeedometerDial.swift; sourceTree = "<group>"; };
@@ -41,7 +37,6 @@
 		00E3570821398239007A95E7 /* HistoryDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryDetailView.swift; sourceTree = "<group>"; };
 		00E3570A21398239007A95E7 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		00E3570C21398239007A95E7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		00E3570E21398239007A95E7 /* TrackModel.xcdatamodeld */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = TrackModel.xcdatamodeld; sourceTree = "<group>"; };
 		00E3571121398239007A95E7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -80,7 +75,6 @@
 				00E356F421398239007A95E7 /* LocationManager.swift */,
 				00E356F621398239007A95E7 /* MotionManager.swift */,
 				00E356F821398239007A95E7 /* DataStore.swift */,
-				00E356FA21398239007A95E7 /* Session+Helpers.swift */,
 				00E356FE21398239007A95E7 /* LiquidGlass.swift */,
 				00E3570021398239007A95E7 /* SpeedometerDial.swift */,
 				00E3570221398239007A95E7 /* SpeedometerView.swift */,
@@ -89,7 +83,6 @@
 				00E3570821398239007A95E7 /* HistoryDetailView.swift */,
 				00E3570A21398239007A95E7 /* SettingsView.swift */,
 				00E3570C21398239007A95E7 /* Assets.xcassets */,
-				00E3570E21398239007A95E7 /* TrackModel.xcdatamodeld */,
 				00E3571121398239007A95E7 /* Info.plist */,
 			);
 			path = LiquidGlassSpeedometer;
@@ -176,9 +169,7 @@
 				00E356F521398239007A95E7 /* LocationManager.swift in Sources */,
 				00E356F721398239007A95E7 /* MotionManager.swift in Sources */,
 				00E356F921398239007A95E7 /* DataStore.swift in Sources */,
-				00E356FB21398239007A95E7 /* Session+Helpers.swift in Sources */,
 				00E356FF21398239007A95E7 /* LiquidGlassSpeedometerApp.swift in Sources */,
-				00E3570F21398239007A95E7 /* TrackModel.xcdatamodeld in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
