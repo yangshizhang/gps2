@@ -16,27 +16,31 @@ struct SpeedometerDial: View {
                 Circle()
                     .stroke(Color.white.opacity(0.28), lineWidth: 1)
 
-                // 外环轨道
+                // 外环轨道（216°弧线，从-108°到108°）
+                // 在旋转后，0 = 顶部，所以：
+                // -108° = 顺时针转 252° = 252/360 = 0.7
+                // 108° = 顺时针转 108° = 108/360 = 0.3
+                // 但由于 0.3 < 0.7，我们使用 to: 0.7 + 0.6 = 1.3
                 Circle()
-                    .trim(from: 0.2, to: 0.8)
+                    .trim(from: 0.7, to: 1.3)
                     .stroke(Color.white.opacity(0.2), lineWidth: 6)
-                    .rotationEffect(.degrees(90))
+                    .rotationEffect(.degrees(90))  // 0位置转到顶部
                     .padding(diameter * 0.05)
 
-                // 实时圆弧（0-200 km/h -> 0~1
+                // 实时圆弧（0-200 km/h）
                 let progress = min(max(speed / 200.0, 0.0), 1.0)
                 Circle()
-                    .trim(from: 0.2, to: 0.2 + progress * 0.6)
+                    .trim(from: 0.7, to: 0.7 + progress * 0.6)  // 从-108°开始，最多到108°
                     .stroke(
                         AngularGradient(
                             colors: [.cyan, .blue, .purple, .pink, .orange, .red],
                             center: .center,
-                            startAngle: .degrees(72 + 90),
-                            endAngle: .degrees(288 + 90)
+                            startAngle: .degrees(-108),
+                            endAngle: .degrees(108)
                         ),
                         style: StrokeStyle(lineWidth: 8, lineCap: .round)
                     )
-                    .rotationEffect(.degrees(180))
+                    .rotationEffect(.degrees(90))  // 与外环轨道一致
                     .padding(diameter * 0.06)
 
                 // 刻度

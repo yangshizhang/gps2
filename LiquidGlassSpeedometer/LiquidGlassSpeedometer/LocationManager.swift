@@ -61,6 +61,13 @@ final class LocationManager: NSObject, ObservableObject {
         currentMockAltitude = altitude
         currentMockHeading = heading
         
+        // 如果有真实位置，使用真实位置作为模拟起点
+        if let loc = lastLocation {
+            mockLatitude = loc.coordinate.latitude
+            mockLongitude = loc.coordinate.longitude
+        }
+        // 否则使用默认位置（天安门）
+        
         stop()
         mockTimer?.invalidate()
         
